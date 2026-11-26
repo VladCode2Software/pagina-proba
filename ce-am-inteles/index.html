@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<!-- Pagina de deblocare: scrisă pentru acest document (Vlad Dragomir Iofcea, 14.11.2026). Conținutul vine după ea, în bucăți criptate (AES-256-GCM, cheia din parolă cu PBKDF2-SHA-256, 600,000 de iterații). -->
+<html lang="ro">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data:; base-uri 'none'; form-action 'none'">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow, noarchive, nosnippet">
+<meta name="referrer" content="no-referrer">
+<title>Pagină protejată</title>
+<link rel="icon" href="data:,">
+<style id="cah-deschidere-stil">*,*::before,*::after{box-sizing:border-box}html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
+body{margin:0;background:#0E1014;color:#F3F4F6;font:400 1.0625rem/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+#cah-deschidere{min-height:100vh;padding:3.5rem 1rem 1rem}
+.box{max-width:26rem;margin:0 auto;background:#1C1F26;border:1px solid #4A505C;border-radius:4px;padding:1.25rem}
+.hidden{display:none!important}
+#cah-deschidere header{margin:0 0 1rem}
+#msg{margin:0;font-size:1rem;font-weight:400}
+header.red #msg{color:#FFB4A8;font-weight:600}
+#cah-form{display:grid;gap:.7rem}
+.et{font-weight:600;font-size:.95rem}
+#pwd{width:100%;min-height:2.9rem;padding:.55rem .8rem;font:inherit;font-weight:400;color:#F3F4F6;background:#0E1014;border:2px solid #9AA3B2;border-radius:3px}
+#pwd:focus{outline:3px solid #FFFFFF;outline-offset:2px;border-color:#FFFFFF}
+.arata{display:flex;align-items:center;gap:.55rem;min-height:2.75rem;font-size:.95rem;cursor:pointer}
+.arata input{width:1.3rem;height:1.3rem;margin:0;accent-color:#8FA6FF}
+.arata input:focus-visible{outline:3px solid #fff;outline-offset:2px}
+#cah-form input[type=submit]{min-height:2.9rem;font:600 1rem system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;color:#fff;background:#1F3FD0;border:2px solid #8FA6FF;border-radius:3px;cursor:pointer}
+#cah-form input[type=submit]:focus-visible{outline:3px solid #fff;outline-offset:2px}
+#load{display:grid;gap:.6rem;justify-items:start}
+#load p{margin:0}
+.cerc{width:1.6rem;height:1.6rem;border:3px solid #4A505C;border-top-color:#F3F4F6;border-radius:50%;animation:roti 1s linear infinite}
+@keyframes roti{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){.cerc{animation:none}}
+.progres{width:100%;height:6px;background:#4A505C;border-radius:3px;overflow:hidden}
+#progres{height:100%;width:0;background:#8FA6FF}
+#estimare{color:#D5D9E0;font-size:.95rem}</style>
+<style>html.cah-intai .sectiune.inceput,html.cah-intai .sectiune.cinci{content-visibility:auto;contain-intrinsic-size:auto 1200px}#cah-rest{position:fixed;left:0;top:0;width:100%;height:3px;z-index:60;pointer-events:none}#cah-rest>div{height:100%;width:0;background:#1F3FD0;transition:width .3s}</style>
+</head>
+<body>
+<main id="cah-deschidere"><div class="box">
+<header><p id="msg" role="status" aria-live="polite">Pagina se deschide cu parola primită.</p></header>
+<form id="cah-form" autocomplete="off" onsubmit="return false">
+<label class="et" for="pwd">Parola</label>
+<input id="pwd" type="password" placeholder="cele cinci cuvinte" autocomplete="off" autocapitalize="none" spellcheck="false" autofocus>
+<label class="arata"><input type="checkbox" id="arata-parola"> Arată parola</label>
+<input type="submit" value="Deschide">
+</form>
+<div id="load" class="hidden" role="status" aria-live="polite"><span class="cerc" aria-hidden="true"></span><p id="load-text">Se încarcă…</p><div class="progres" aria-hidden="true"><div id="progres"></div></div><p id="estimare"></p></div>
+</div></main>
+<script type="application/json" id="cah-antet">{"v":1,"sare":"lxYEFKzjhnobxHtAt05fd3OeMis93NqjVos+AgX6MOA=","iteratii":600000,"n":2,"octeti":9832,"id":"lxYEFKzjhnob"}</script>
+<script>(function () {
+  "use strict";
+  var A = JSON.parse(document.getElementById("cah-antet").textContent);
+  var subtle = window.crypto && window.crypto.subtle;
+  function $(id) { return document.getElementById(id); }
+  var hdr = document.querySelector("#cah-deschidere header"), form = $("cah-form"), load = $("load"), msg = $("msg"), pwd = $("pwd");
+  var LOC = "cah-pagina-" + A.id;
+  var enc = new TextEncoder();
+  var bucati = [], octeti = 0, cheie = null, deFacut = [], facute = 0, lucreaza = false, asteaptaPrima = null, ceas = 0, gata = false, pornit = false;
+  // Repere de timp pentru probe (masoara_viteza.mjs); nu poartă nimic din document.
+  function reper(n) { try { performance.mark(n); } catch (e) { /* fără */ } }
+  function arata(e) { e.classList.remove("hidden"); }
+  function ascunde(e) { e.classList.add("hidden"); }
+  function b64(t) { var s = atob(t), b = new Uint8Array(s.length); for (var i = 0; i < s.length; i++) { b[i] = s.charCodeAt(i); } return b; }
+  function bt64(buf) { var b = new Uint8Array(buf), s = ""; for (var i = 0; i < b.length; i++) { s += String.fromCharCode(b[i]); } return btoa(s); }
+  function cere(text, rosu) {
+    window.clearTimeout(ceas);
+    msg.textContent = text;
+    hdr.className = rosu ? "flex red" : "flex";
+    arata(form); ascunde(load);
+    pwd.focus(); pwd.select();
+  }
+  function progres() {
+    var p = Math.min(100, Math.round((octeti / A.octeti) * 100));
+    var b = $("progres"); if (b) { b.style.width = p + "%"; }
+    var r = $("cah-rest"); if (r) { var q = Math.min(p, Math.round((facute / A.n) * 100)); r.firstChild.style.width = q + "%"; r.setAttribute("aria-valuenow", String(q)); }
+  }
+  // Fiecare bucată sosită se ia din pagină și se ține în memorie; scriptul de după ea o anunță.
+  window.__cahB = function () {
+    var p = document.querySelectorAll("script.cah-b"), s = p[p.length - 1], i = +s.getAttribute("data-i");
+    bucati[i] = s.textContent; octeti += bucati[i].length;
+    s.parentNode.removeChild(s);
+    if (document.currentScript) { document.currentScript.parentNode.removeChild(document.currentScript); }
+    progres();
+    if (i === 0 && asteaptaPrima) { var f = asteaptaPrima; asteaptaPrima = null; f(); }
+    if (cheie) { pompa(); }
+  };
+  function deschideBucata(i) {
+    var b = b64(bucati[i]);
+    return subtle.decrypt({ name: "AES-GCM", iv: b.subarray(0, 12), additionalData: enc.encode("careathome-pagina|" + i + "|" + A.n) }, cheie || arguments[1], b.subarray(12))
+      .then(function (buf) { return new Response(new Blob([buf]).stream().pipeThrough(new DecompressionStream("deflate-raw"))).text(); })
+      .then(function (t) { return JSON.parse(t); });
+  }
+  function prima() {
+    if (bucati[0]) { return Promise.resolve(); }
+    $("load-text").textContent = "Se încarcă documentul…";
+    return new Promise(function (r) { asteaptaPrima = r; });
+  }
+  function estimare() {
+    ceas = window.setTimeout(function () {
+      $("estimare").textContent = "Durează mai mult pe un telefon mai vechi ori cu semnal slab. Nu închideți pagina: se deschide singură, de obicei în mai puțin de un minut.";
+    }, 3000);
+  }
+  function incearca(parola, salvata) {
+    ascunde(form); hdr.className = "hidden"; arata(load);
+    $("load-text").textContent = salvata ? "Se deschide…" : "Verific parola…";
+    $("estimare").textContent = "";
+    estimare();
+    var bits = salvata ? Promise.resolve(b64(salvata)) : subtle.importKey("raw", enc.encode(parola), "PBKDF2", false, ["deriveBits"]).then(function (k) {
+      return subtle.deriveBits({ name: "PBKDF2", hash: "SHA-256", salt: b64(A.sare), iterations: A.iteratii }, k, 256);
+    });
+    var brut;
+    bits.then(function (b) { brut = b; reper("cah-cheie"); opritIncalzirea = true; return subtle.importKey("raw", b, "AES-GCM", false, ["decrypt"]); }).then(function (k) {
+      return prima().then(function () { $("load-text").textContent = "Se deschide…"; return deschideBucata(0, k); }).then(function (o) { reper("cah-prima"); return { k: k, o: o }; });
+    }).then(function (r) {
+      window.clearTimeout(ceas);
+      try { window.sessionStorage.setItem(LOC, bt64(brut)); } catch (e) { /* se cere din nou la reîncărcare */ }
+      if (parola) { window.__cahParola = parola; }
+      bucati[0] = null;
+      // Fonturile vin primele după ecranul citibil, apoi restul, în ordine. Până la ele, textul stă în litera
+      // sistemului (font-display: swap), încălzită pe pagina parolei: primul ecran nu așteaptă fonturile.
+      // După fonturi, ce stă sub copertă în prima bucată (cuprinsul, „Ce vă cerem”, drumul scurt) se așază câte
+      // o parte pe sarcină, cu literele adevărate, ca derularea și deschiderea cuprinsului să nu mai aștepte.
+      deFacut.push(1, "cuprins", "inceput", "cinci-minute", "intai");
+      for (var i = 2; i < A.n; i++) { deFacut.push(i); }
+      cheie = r.k;
+      puneInceputul(r.o);
+      facute++;
+    }, function () {
+      if (salvata) { try { window.sessionStorage.removeItem(LOC); } catch (e) { /* nimic */ } cere("Pagina se deschide cu parola primită."); return; }
+      opritIncalzirea = false; window.setTimeout(pasIncalzire, 0);
+      cere("Parola nu se potrivește. Sunt cinci cuvinte, cu spații între ele; verificați-le și apăsați din nou „Deschide”.", true);
+    });
+  }
+  function puneInceputul(o) {
+    var r = document.createRange();
+    // Cutia de încălzire iese înaintea documentului: altfel s-ar așeza din nou, cu el, în primul cadru.
+    opritIncalzirea = true;
+    var ci = $("cah-incalzire"); if (ci) { ci.parentNode.removeChild(ci); }
+    var t = document.querySelector("head > title"); if (t) { t.parentNode.removeChild(t); }
+    r.selectNodeContents(document.head);
+    document.head.appendChild(r.createContextualFragment(o.cap));
+    var s = $("cah-deschidere-stil"); s.parentNode.removeChild(s);
+    var d = $("cah-deschidere");
+    var bara = document.createElement("div");
+    bara.id = "cah-rest"; bara.setAttribute("role", "progressbar"); bara.setAttribute("aria-label", "Se încarcă restul documentului");
+    bara.setAttribute("aria-valuemin", "0"); bara.setAttribute("aria-valuemax", "100"); bara.appendChild(document.createElement("div"));
+    r.selectNodeContents(document.body);
+    var f = r.createContextualFragment(o.corp);
+    // Scriptul paginii pornește abia după primul cadru: întâi se desenează coperta, apoi se leagă butoanele.
+    var amanate = [];
+    Array.prototype.slice.call(f.querySelectorAll("script")).forEach(function (s) {
+      if (s.type && s.type !== "text/javascript") { return; }
+      var loc = document.createComment("script");
+      s.parentNode.replaceChild(loc, s);
+      amanate.push({ loc: loc, text: s.textContent });
+    });
+    document.documentElement.classList.add("cah-intai");
+    document.body.insertBefore(bara, d);
+    document.body.insertBefore(f, d);
+    d.parentNode.removeChild(d);
+    progres();
+    reper("cah-pus");
+    dupaCadru(function () {
+      reper("cah-desenat");
+      amanate.forEach(function (a) { var x = document.createElement("script"); x.textContent = a.text; a.loc.parentNode.replaceChild(x, a.loc); });
+      reper("cah-script");
+      pornit = true;
+      dupaCadru(pompa);
+    });
+  }
+  function pune(o) {
+    if (o.fel === "fonturi") {
+      var st = document.createElement("style"); st.textContent = o.css; document.head.appendChild(st);
+      // Fonturile se deschid acum, nu la prima literă care le cere: ce se așază după ele le folosește direct.
+      var l = [];
+      if (document.fonts && document.fonts.forEach) { document.fonts.forEach(function (f) { if (f.status === "unloaded") { l.push(f.load().then(null, function () { return null; })); } }); }
+      return Promise.all(l);
+    }
+    // Și bucățile mari intră dintr-o dată: citite într-un document deoparte și mutate apoi (cum se făcea până
+    // la 14.11.2026), cereau la mutare o așezare de 1,5–1,9 s pe telefonul încetinit (proba vitezei).
+    // Secțiunea intră ascunsă de tot (content-visibility: hidden) și trece la „auto” (din pagina.css) după un
+    // cadru: intrată direct cu „auto”, Chrome o așeza uneori întreagă în primul cadru, deși era departe de ecran.
+    var f = document.createRange().createContextualFragment(o.html);
+    var noduri = Array.prototype.slice.call(f.childNodes);
+    var ascunse = noduri.filter(function (n) { return n.nodeType === 1 && n.classList.contains("sectiune"); });
+    ascunse.forEach(function (n) { n.style.contentVisibility = "hidden"; });
+    $("continut").appendChild(f);
+    document.dispatchEvent(new CustomEvent("cah-bucata", { detail: { noduri: noduri } }));
+    return new Promise(function (gata) {
+      dupaCadru(function () { ascunse.forEach(function (n) { n.style.contentVisibility = ""; }); gata(); });
+    });
+  }
+  // Literele sistemului, încălzite câte una pe sarcină după ce s-a desenat cererea parolei, cât omul scrie:
+  // prima folosire a unei litere într-o grosime și o mărime noi costă, pe telefonul încetinit, 35–80 ms, iar
+  // primul ecran al documentului (care se așază cu ele până sosesc fonturile) ar plăti-o pentru fiecare.
+  // Se încălzesc exact declarațiile „font:” din CSS-ul paginii (mărimile în em, socotite față de rădăcina
+  // paginii, 106,25%), în ordinea lor (întâi coperta), apoi înclinatele și grosul. Textul e fix, nu din document.
+  var LITERE = ["italic 400 1em system-ui,-apple-system,\"Segoe UI\",Roboto,Arial,sans-serif","italic 400 0.95em system-ui,-apple-system,\"Segoe UI\",Roboto,Arial,sans-serif","700 1em system-ui,-apple-system,\"Segoe UI\",Roboto,Arial,sans-serif","700 1em Georgia,serif","italic 600 1em Georgia,serif"], PROBA = "ăâîșț ĂÂÎȘȚ „Hotărârea 1” – — … · × ☐ ↓ «ó» 0123456789 documentului platformei";
+  // Încălzirea se oprește cât lucrează cheia și documentul, și se reia după o parolă greșită.
+  var opritIncalzirea = false, deIncalzit = null, cutie = null;
+  function incalzeste() {
+    if (deIncalzit || opritIncalzirea) { return; }
+    cutie = document.createElement("div");
+    cutie.id = "cah-incalzire"; cutie.setAttribute("aria-hidden", "true");
+    cutie.style.cssText = "position:absolute;left:-9999px;top:0;width:24rem;overflow:hidden;font-size:1rem";
+    document.body.appendChild(cutie);
+    // Întâi despărțirea în silabe (titlul copertei o cere, hyphens: auto): dicționarul românesc se încarcă
+    // o singură dată, la prima folosire, și costă cât multe litere la un loc.
+    deIncalzit = [LITERE[0] + "|hyphens:auto;-webkit-hyphens:auto;width:3em;"].concat(LITERE);
+    pasIncalzire();
+  }
+  function pasIncalzire() {
+    if (!deIncalzit || !deIncalzit.length || opritIncalzirea || !cutie.parentNode) { return; }
+    var x = deIncalzit.shift().split("|"), p = document.createElement("p");
+    p.style.cssText = "margin:0;" + (x[1] || "");
+    p.style.font = x[0];
+    p.textContent = PROBA;
+    cutie.appendChild(p);
+    void p.offsetHeight;
+    window.setTimeout(pasIncalzire, 0);
+  }
+  // Bucata următoare, după ce ecranul s-a desenat: prima pagină se vede imediat, iar atingerile au loc între bucăți.
+  function dupaCadru(f) {
+    var t = window.setTimeout(f, 250);
+    window.requestAnimationFrame(function () { window.clearTimeout(t); window.setTimeout(f, 0); });
+  }
+  function pompa() {
+    if (lucreaza || !cheie || !pornit || gata || !$("continut")) { return; }
+    if (!deFacut.length) { sfarsit(); return; }
+    var i = deFacut[0];
+    if (typeof i === "string") {
+      deFacut.shift();
+      aseaza(i);
+      reper("cah-asezat-" + i);
+      if (!deFacut.length) { sfarsit(); } else { dupaCadru(pompa); }
+      return;
+    }
+    if (!bucati[i]) { return; }
+    lucreaza = true;
+    deschideBucata(i).then(function (o) {
+      bucati[i] = null;
+      deFacut.shift();
+      return pune(o).then(function () {
+        reper("cah-b" + i);
+        facute++;
+        progres();
+        lucreaza = false;
+        if (!deFacut.length) { sfarsit(); } else { dupaCadru(pompa); }
+      });
+    }).then(null, function () {
+      lucreaza = false;
+      var r = $("cah-rest"); if (r) { r.parentNode.removeChild(r); }
+      var v = document.getElementById("vestire");
+      if (v) { v.textContent = "O parte din document nu s-a putut deschide. Reîncărcați pagina."; v.classList.add("arata"); }
+    });
+  }
+  // O parte din primul ecran, sărită până acum (content-visibility), se așază o dată, într-o sarcină a ei.
+  // Cuprinsul închis rămâne apoi sărit (pagina.css); „Ce vă cerem” și drumul scurt rămân așezate, iar la
+  // pasul „intai” pagina iese din starea primului cadru.
+  function aseaza(id) {
+    if (id === "intai") {
+      document.documentElement.classList.remove("cah-intai");
+      ["inceput", "cinci-minute"].forEach(function (x) { var s = document.getElementById(x); if (s) { s.style.contentVisibility = ""; } });
+      return;
+    }
+    var e = document.getElementById(id);
+    if (!e) { return; }
+    var v = e.style.contentVisibility;
+    e.style.contentVisibility = "visible";
+    void e.offsetHeight;
+    if (id === "cuprins") { e.style.contentVisibility = v; }
+  }
+  function sfarsit() {
+    gata = true;
+    var r = $("cah-rest"); if (r) { r.parentNode.removeChild(r); }
+    document.documentElement.setAttribute("data-pagina", "intreaga");
+    document.dispatchEvent(new CustomEvent("cah-gata"));
+  }
+
+  if (!subtle || !window.DecompressionStream || !window.TextDecoder) {
+    cere("Browserul acesta nu poate deschide pagina. Încercați cu Chrome ori cu Safari, aduse la zi.", true);
+    pwd.disabled = true;
+    return;
+  }
+  form.addEventListener("submit", function (e) {
+    e.preventDefault();
+    var p = pwd.value.trim().toLowerCase().replace(/\s+/g, " ");
+    if (!p) { cere("Scrieți parola: cinci cuvinte, cu spații între ele.", true); return; }
+    incearca(p, "");
+  });
+  $("arata-parola").addEventListener("change", function () { pwd.type = this.checked ? "text" : "password"; pwd.focus(); });
+  var salvata = null;
+  try { salvata = window.sessionStorage.getItem(LOC); } catch (e) { salvata = null; }
+  if (salvata) { incearca("", salvata); } else { cere("Pagina se deschide cu parola primită."); }
+  dupaCadru(incalzeste);
+})();</script>
+<script type="text/plain" class="cah-b" data-i="0">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</script><script>__cahB()</script>
+<script type="text/plain" class="cah-b" data-i="1">CCrf1iRX9cnF207J4gu82q+aFnG2PCaEdZUUEkqPkFHijEcKJ3ktDa8fSvLPhWt/X7gMtv8Dxzs=</script><script>__cahB()</script>
+</body>
+</html>
